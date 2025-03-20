@@ -25,23 +25,8 @@ def run_bash_command(command):
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         if result.returncode != 0:
             return f"Command failed with error: {result.stderr}"
+        print(result.stdout)
         return result.stdout
-    except Exception as e:
-        return str(e)
-
-def restart():
-    try:
-        os.execv(sys.executable, [sys.executable] + sys.argv)
-        return "Restarting..."
-    except Exception as e:
-        return str(e)
-
-def switch_tools(version):
-    try:
-        global tools
-        tools_module = importlib.import_module(f"tools_{version}")
-        tools = tools_module.tools
-        return f"Switched to tools version {version}"
     except Exception as e:
         return str(e)
 
@@ -115,35 +100,6 @@ tools = [{
             },
             "required": [
                 "command"
-            ],
-            "additionalProperties": False
-        },
-        "strict": True
-    }
-},
-{
-    "type": "function",
-    "function": {
-        "name": "restart",
-        "description": "Restart the AI assistant to apply changes",
-        "strict": True
-    }
-},
-{
-    "type": "function",
-    "function": {
-        "name": "switch_tools",
-        "description": "Switch between different versions of tools",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "version": {
-                    "type": "string",
-                    "description": "The version of tools to switch to (e.g., 'v1', 'v2')."
-                }
-            },
-            "required": [
-                "version"
             ],
             "additionalProperties": False
         },

@@ -3,6 +3,7 @@ from tools import *
 import os
 import json
 import logging
+import importlib
 
 # load environment variables
 from dotenv import load_dotenv
@@ -19,6 +20,8 @@ system = '''
 You are an AI assistant that can read, write, and list files. 
 You can use these capabilities to change your own abilities and system prompt as requested by the user. 
 Otherwise, you will just act as a normal, knowledgeable assistant. Whenever you use a tool, please also say what you are doing.
+
+You are currently using version v1 of the tools module.
 '''
 
 messages = [
@@ -27,6 +30,22 @@ messages = [
         "content": system
     }
 ]
+
+def switch_tools(version):
+    try:
+        global tools
+        tools_module = importlib.import_module(f"tools_{version}")
+        tools = tools_module.tools
+        messages[0]['content'] = f'''
+You are an AI assistant that can read, write, and list files. 
+You can use these capabilities to change your own abilities and system prompt as requested by the user. 
+Otherwise, you will just act as a normal, knowledgeable assistant. Whenever you use a tool, please also say what you are doing.
+
+You are currently using version {version} of the tools module.
+'''
+        return f"Switched to tools version {version}"
+    except Exception as e:
+        return str(e)
 
 def run():
     done = False
@@ -53,7 +72,9 @@ def run():
         messages.append(response.choices[0].message)
         if response.choices[0].message.tool_calls is not None:
           for tool in response.choices[0].message.tool_calls:
+            print(tool.function.name)
             args = json.loads(tool.function.arguments)
+            print(args)
             if tool.function.name == "write_file":
               result = write_file(**args)
               messages.append({
@@ -81,14 +102,7 @@ def run():
                   "role": "tool",
                   "tool_call_id": tool.id,
                   "content": result
-              })
-            elif tool.function.name == "restart":
-              result = restart()
-              messages.append({
-                  "role": "tool",
-                  "tool_call_id": tool.id,
-                  "content": result
-              })
+              })            
             elif tool.function.name == "switch_tools":
               result = switch_tools(**args)
               messages.append({
