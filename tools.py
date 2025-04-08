@@ -3,6 +3,7 @@ import subprocess
 import sys
 import importlib
 import json
+import requests
 
 # Global variable to track the current working directory
 current_directory = os.getcwd()
@@ -80,6 +81,38 @@ def reload_tools():
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+@register_tool
+def make_http_request(endpoint, request_type, body=None):
+    """
+    Make an HTTP request to the specified endpoint.
+
+    Args:
+        endpoint (str): The URL to send the request to.
+        request_type (str): The HTTP method (e.g., "GET", "POST", "PUT", "DELETE").
+        body (dict, optional): The request body for methods like POST or PUT.
+
+    Returns:
+        str: The response from the HTTP request or an error message.
+    """
+    try:
+        request_type = request_type.upper()
+        if request_type == "GET":
+            response = requests.get(endpoint)
+        elif request_type == "POST":
+            response = requests.post(endpoint, json=body)
+        elif request_type == "PUT":
+            response = requests.put(endpoint, json=body)
+        elif request_type == "DELETE":
+            response = requests.delete(endpoint)
+        else:
+            return f"Unsupported request type: {request_type}"
+
+        if response.status_code >= 400:
+            return f"Request failed with status code {response.status_code}: {response.text}"
+        return response.json() if response.text else "Request successful (no response body)."
+    except Exception as e:
+        return f"HTTP request failed: {str(e)}"
 
 def execute_tool(tool_name, arguments):
     """Execute a tool by name with the given arguments."""

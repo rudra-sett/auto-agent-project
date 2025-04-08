@@ -21,33 +21,44 @@ messages = [{"role": "system", "content": system}]
 
 def run():
     done = False
+    skip = False
     while not done:
         try:
-            prompt = input("You: ")
-            if prompt == "exit":
+          if not skip:
+              prompt = input("You: ")
+              if prompt == "exit":
                 done = True
                 break
-            messages.append({"role": "user", "content": prompt})
+              messages.append({
+                  "role": "user",
+                  "content": prompt
+              })
 
-            response = client.chat.completions.create(
-                model="deepseek-chat",
-                messages=messages,
-                tools=tools,
-                stream=False
-            )
+          response = client.chat.completions.create(
+              model="deepseek-chat",
+              messages=messages,
+              tools=tools,
+              stream=False
+          )            
 
-            if response.choices[0].message.tool_calls:
-                for tool in response.choices[0].message.tool_calls:
-                    tool_name = tool.function.name
-                    tool_args = json.loads(tool.function.arguments)
-                    result = execute_tool(tool_name, tool_args)
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tool.id,
-                        "content": str(result)
-                    })
-            else:
+          messages.append(response.choices[0].message)          
+
+          if response.choices[0].message.tool_calls:
+              for tool in response.choices[0].message.tool_calls:
+                  tool_name = tool.function.name
+                  tool_args = json.loads(tool.function.arguments)
+                  result = execute_tool(tool_name, tool_args)
+                  messages.append({
+                      "role": "tool",
+                      "tool_call_id": tool.id,
+                      "content": str(result)
+                  })
+              if response.choices[0].message.content:
                 print("AI:", response.choices[0].message.content)
+              skip = True
+          else:
+              skip = False
+              print("AI:", response.choices[0].message.content)
 
         except Exception as e:
             logging.error(f"Error: {e}")
