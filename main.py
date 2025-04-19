@@ -110,7 +110,7 @@ def save_message(filename, message_dict):
 
 
         with open(filename, 'a', encoding='utf-8') as f:
-            f.write(json.dumps(message_dict) + '\\n')
+            f.write(json.dumps(message_dict) + '\n')
     except IOError as e:
         logging.error(f"Error writing to history file '{filename}': {e}")
     except TypeError as e:
@@ -151,7 +151,7 @@ def run():
             skip_prompt = False
 
             # 2. Get Model Response
-            logging.info("Sending request to AI model...")
+            # logging.info("Sending request to AI model...")
             response = client.chat.completions.create(
                 model=model_name,
                 messages=messages,
@@ -182,7 +182,7 @@ def run():
 
             messages.append(assistant_message_dict) # Append the dictionary
             save_message(HISTORY_FILE, assistant_message_dict) # Save assistant message
-            logging.info("Assistant message saved.")
+            # logging.info("Assistant message saved.")
 
             # 3. Handle Tool Calls (if any)
             if assistant_message_obj.tool_calls:
@@ -199,9 +199,9 @@ def run():
                         logging.error(f"Error decoding arguments for tool '{tool_name}': {e}. Arguments: {tool_call.function.arguments}")
                         tool_result = f"Error: Invalid JSON arguments provided for tool {tool_name}."
                     else:
-                        logging.info(f"Executing tool: {tool_name} with args: {tool_args}")
+                        # logging.info(f"Executing tool: {tool_name} with args: {tool_args}")
                         tool_result = execute_tool(tool_name, tool_args)
-                        logging.info(f"Tool result: {tool_result}")
+                        # logging.info(f"Tool result: {tool_result}")
 
 
                     tool_message = {
@@ -212,7 +212,7 @@ def run():
                     }
                     messages.append(tool_message)
                     save_message(HISTORY_FILE, tool_message) # Save tool message
-                    logging.info(f"Tool message for '{tool_name}' saved.")
+                    # logging.info(f"Tool message for '{tool_name}' saved.")
 
                 # Set flag to skip user prompt and immediately call model again with tool results
                 skip_prompt = True

@@ -6,6 +6,7 @@ import importlib
 import json
 import requests
 import logging
+import tempfile as f
 
 # --- RAG Dependencies ---
 # Wrap in try-except to allow other tools to function if RAG components are missing
@@ -573,6 +574,62 @@ def rag_retrieve(query_text, top_k=5):
     return {"results": results}
 
 
+@register_tool
+def execute_python_code(code):
+    """
+    Executes a Python code snippet in a sandboxed environment and returns the output.
+    **WARNING: This tool is not truly sandboxed and can be dangerous.  Do not use in production without a proper sandboxing solution (e.g., Docker, Firejail).**
+    Args:
+        code (str): The Python code to execute.
+    Returns:
+        str: The output of the code execution or an error message.
+    """
+
+    try:
+        # 1. Create a temporary file to store the code.
+        with f.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as temp_file:
+            temp_file.write(code)
+            temp_file_name = temp_file.name
+
+        # 2. Construct the command to execute the code in a restricted environment.
+        #    This example uses subprocess and limits execution time and resources.
+        #    Ideally, a more sophisticated sandboxing solution (e.g., Docker, Firejail) would be used.
+        command = [
+            sys.executable,  # Use the same Python interpreter as the agent
+            temp_file_name
+        ]
+
+        # 3. Execute the command with a timeout.
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=300,  # Limit execution time to 5 minutes (300 seconds)
+            cwd=os.getcwd(), # Keep the cwd the same
+            # Disable shell=True for security (avoid shell injection)
+            # Use preexec_fn to drop privileges (requires more setup)
+        )
+
+        # 4. Process the output.
+        stdout = result.stdout.strip()
+        stderr = result.stderr.strip()
+        if stderr:
+            return f"Error: {stderr}"
+        else:
+            return stdout
+
+    except subprocess.TimeoutExpired:
+        return "Error: Code execution timed out."
+    except Exception as e:
+        return f"Error executing code: {str(e)}"
+    finally:
+        # 5. Clean up the temporary file.
+        try:
+            os.remove(temp_file_name)
+        except OSError as e:
+            print(f"Warning: Could not delete temporary file {temp_file_name}: {e}")
+
+
 # --- Tool Execution Logic ---
 
 def execute_tool(tool_name, arguments):
@@ -637,4 +694,3 @@ for tool_name, func in tool_registry.items():
 #     if tool_def["function"]["name"] == "write_file":
 #         tool_def["function"]["parameters"]["properties"]["file_name"]["description"] = "The name of the file to create or overwrite."
 #         tool_def["function"]["parameters"]["properties"]["content"]["description"] = "The text content to write into the file."
-
